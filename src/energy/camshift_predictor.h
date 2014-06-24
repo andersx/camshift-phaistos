@@ -24,17 +24,13 @@
 #include <vector>
 #include <math.h>
 
-#include "camshift_data.h"
-
-
+#include "camshift_predictor_data.h"
 
 namespace phaistos {
 
-class CamshiftBackendBase {
+class CamshiftPredictor {
 
 public:
-
-    
 
      //! Define the cutoff defining an H-bond in angstroms (Must be 3 angstroms)
      double h_bond_cutoff; 
@@ -1438,14 +1434,14 @@ public:
           return ss_bond_contribution;
      }
 
-     CamshiftBackendBase () {
+     CamshiftPredictor() {
      }
 
      //! Constructor for CamshiftBackendBase
      //! Camshift predictors inhereit from this class
-       CamshiftBackendBase(phaistos::ChainFB *chain) {
+       CamshiftPredictor(phaistos::ChainFB *chain) {
 
-           using namespace phaistos;
+          using namespace phaistos;
           using namespace definitions;
 
           for (int i = 0; i < chain->size(); i++) {
@@ -1526,7 +1522,7 @@ public:
     }
 
 
-}; //End class CamshiftBackendBase
+}; //End class CamshiftPredicto
 
 } // End namespace phaistos
 

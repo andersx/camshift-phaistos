@@ -1,4 +1,4 @@
-// Copyright (C) 2011 by Anders Steen Christensen, Wouter Boomsma, Simon Olsson, Lars Bratholm
+// Copyright (C) 2014 by Anders Steen Christensen, Wouter Boomsma, Simon Olsson, Lars Bratholm
 //
 // This file is part of PHAISTOS
 //
@@ -16,39 +16,28 @@
 // along with PHAISTOS.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef CAMSHIFT
-#define CAMSHIFT
+#ifndef CAMSHIFT_BASE
+#define CAMSHIFT_BASE
 
-#include "energy/energy_term.h"
-#include <boost/type_traits/is_base_of.hpp>
 #include <iostream>
 #include <vector>
-#include <math.h>
-#include <cmath>
 #include <string.h>
 
-#include <boost/random.hpp>
-#include <boost/random/gamma_distribution.hpp>
 #include <boost/random/uniform_smallint.hpp>
-
-#include <boost/random/lognormal_distribution.hpp>
 #include <boost/random/normal_distribution.hpp>
-#include <boost/math/distributions/bernoulli.hpp>
-#include "protein/iterators/pair_iterator_chaintree.h" 
+
 #include "protein/chain_fb.h"
 #include "protein/definitions.h"
 #include "energy/energy.h"
-#include "energy/camshift.h"
-#include "camshift_data.h"
+
 #include "camshift_predictor.h"
-#include <time.h>
 
 namespace phaistos {
 
 //! Class from which Camshift energy terms inherit their predictions
 template <typename DERIVED_CLASS>
 class TermCamshiftBase: public EnergyTermCommon<DERIVED_CLASS, ChainFB>, 
-                        public CamshiftBackendBase {
+                        public CamshiftPredictor {
 
      //! Class from which Camshift energy terms inherit their predictions
      typedef phaistos::EnergyTermCommon<DERIVED_CLASS, ChainFB> EnergyTermCommon;     
@@ -346,14 +335,16 @@ public:
           std::string star_filename;
 
           //! Type of energy function
-          int energy_type;
+          std::string energy_type;
+          // int energy_type;
 
           //! Whether to sample weights
           bool sample_weights;
 
           //! Constructor
           Settings(std::string star_filename="",
-                   int energy_type=1,
+                   std::string energy_type="gauss",
+                   //int energy_type=1,
                    bool sample_weights=false)
               : star_filename(star_filename),
                 energy_type(energy_type),
@@ -381,7 +372,7 @@ public:
      TermCamshiftBase(ChainFB *chain, std::string name, const Settings &settings=Settings(),
                       RandomNumberEngine *random_number_engine = &random_global)
           : EnergyTermCommon(chain, name, settings, random_number_engine),
-            CamshiftBackendBase(chain),
+            CamshiftPredictor(chain),
             random_number_engine(random_number_engine),
             settings(settings) {
 
@@ -392,10 +383,10 @@ public:
           this->weights = vector_utils::make_vector(1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
 
           // Set some initial weights for Gauss model
-          if (settings.energy_type == 1) this->weights = vector_utils::make_vector(0.3, 0.9, 0.45, 2.9, 1.1, 1.0);
+          if (settings.energy_type == "gauss") this->weights = vector_utils::make_vector(0.3, 0.9, 0.45, 2.9, 1.1, 1.0);
 
           // Set some initial weights for Cauchy model
-          if (settings.energy_type == 2) this->weights = vector_utils::make_vector(0.1875, 0.7, 0.3075, 1.8675, 0.735, 0.7675);
+          if (settings.energy_type == "cauchy") this->weights = vector_utils::make_vector(0.1875, 0.7, 0.3075, 1.8675, 0.735, 0.7675);
 
           // Put the same weights in the backup
           this->weights_previous = this->weights;
@@ -423,7 +414,7 @@ public:
                       RandomNumberEngine *random_number_engine,
                       int thread_index, ChainFB *chain)
           : EnergyTermCommon(other, random_number_engine, thread_index, chain),
-            CamshiftBackendBase(chain),
+            CamshiftPredictor(chain),
             random_number_engine(other.random_number_engine),
             none_move(other.none_move),
             weights(other.weights),
@@ -458,8 +449,8 @@ public:
           // If this move is a none-move, update weights
           if ((this->none_move) && (settings.sample_weights)) {
 
-               if ((settings.energy_type == 1) || 
-                   (settings.energy_type == 2)) {
+               if ((settings.energy_type == "gauss") || 
+                   (settings.energy_type == "cauchy")) {
                     this->weights = update_weights(this->weights, this->random_number_engine);
                }
 
@@ -473,21 +464,21 @@ public:
           double energy = 0.0;
 
           // Gauss model
-          if (settings.energy_type == 1) {
+          if (settings.energy_type == "gauss") {
                energy = energy_log_gauss(this->protein_predicted_cs, 
                                          this->chemshifts_from_file,
                                          this->weights);
           // Cauchy model
-          } else if (settings.energy_type == 2) {
+          } else if (settings.energy_type == "cauchy") {
                energy = energy_log_cauchy(this->protein_predicted_cs, 
                                           this->chemshifts_from_file,
                                           this->weights);
           // Flat bottom potential
-          } else if (settings.energy_type == 3) {
+          } else if (settings.energy_type == "flat_bottom") {
                energy = energy_flat_bottom(this->protein_predicted_cs, 
                                            this->chemshifts_from_file);
           // Gauss model // marginalized weights
-          } else if (settings.energy_type == 4) {
+          } else if (settings.energy_type == "gauss_marginalized") {
                energy = energy_log_gauss_no_sigma(this->protein_predicted_cs, 
                                                   this->chemshifts_from_file);
           // Undefined energy function

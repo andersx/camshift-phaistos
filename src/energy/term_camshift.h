@@ -19,7 +19,7 @@
 #ifndef TERM_CAMSHIFT
 #define TERM_CAMSHIFT
 
-#include "camshift.h"
+#include "term_camshift_base.h"
 
 namespace phaistos {
 

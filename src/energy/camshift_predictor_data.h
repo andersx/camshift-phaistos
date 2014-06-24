@@ -22,21 +22,8 @@
 #ifndef CAMSHIFT_DATA
 #define CAMSHIFT_DATA
 
-#include "energy/energy_term.h"
-#include <boost/type_traits/is_base_of.hpp>
 #include <boost/assign/list_of.hpp>
-#include <iostream>
-#include <vector>
-#include <math.h>
-#include <cmath>
-#include <string.h>
-#include "protein/chain_fb.h"
 #include "protein/definitions.h"
-#include "energy/energy.h"
-#include "energy/camshift.h"
-
-// using namespace phaistos;
-// using namespace definitions;
 
 namespace camshift_constants {
 
