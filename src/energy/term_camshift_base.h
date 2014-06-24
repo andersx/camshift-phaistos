@@ -379,13 +379,13 @@ public:
           // Reset none-move check
           this->none_move = false;
 
-          // Set some initial default weights
+          // Set some initial default weights       HA   CA   HN   NH   CO   CB
           this->weights = vector_utils::make_vector(1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
 
-          // Set some initial weights for Gauss model
+          // Set some initial weights for Gauss model (sigma values)                     HA   CA   HN    NH   CO   CB
           if (settings.energy_type == "gauss") this->weights = vector_utils::make_vector(0.3, 0.9, 0.45, 2.9, 1.1, 1.0);
 
-          // Set some initial weights for Cauchy model
+          // Set some initial weights for Cauchy model (gamma values)                     HA      CA   HN      NH      CO     CB
           if (settings.energy_type == "cauchy") this->weights = vector_utils::make_vector(0.1875, 0.7, 0.3075, 1.8675, 0.735, 0.7675);
 
           // Put the same weights in the backup
