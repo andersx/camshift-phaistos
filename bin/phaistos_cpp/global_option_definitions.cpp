@@ -51,11 +51,11 @@ struct EnergyOptions {
                                           std::string("Chemical shifts file from RefDB"),
                                           &settings->star_filename),
                               make_vector(std::string("energy-type"),
-                                          std::string("Type of energy expression: 1=Robustelli 2=Jeffrey's Prior 3=Naive Gaussian 4=ProCS"),
+                                          std::string("Type of energy expression: 1=Gauss, 2=Cauchy, 3=Flat-bottom, 4=Gauss/marginalized weights"),
                                           &settings->energy_type),
-                              make_vector(std::string("flat-bottom-tolerance"),
-                                          std::string("The tolerance parameter for flat bottom potentials"),
-                                          &settings->flat_bottom_tolerance)
+                              make_vector(std::string("sample-weights"),
+                                          std::string("Whether weights should be sampled or not"),
+                                          &settings->sample_weights)
                               )),
                     super_group, counter==1);
           }
@@ -82,14 +82,11 @@ struct EnergyOptions {
                                           std::string("Chemical shifts file from RefDB"),
                                           &settings->star_filename),
                               make_vector(std::string("energy-type"),
-                                          std::string("Type of energy expression: 1=Robustelli 2=Jeffrey's Prior 3=Naive Gaussian 4=ProCS"),
+                                          std::string("Type of energy expression: 1=Gauss, 2=Cauchy, 3=Flat-bottom, 4=Gauss/marginalized weights"),
                                           &settings->energy_type),
-                              make_vector(std::string("cutoff-distance"),
-                                          std::string("Distance beyond which contributions are set to 0. Use only for debugging!"),
-                                          reinterpret_cast<ProgramOptionParser::WrappedDoublePointer*>(&settings->cutoff_distance)),
-                              make_vector(std::string("flat-bottom-tolerance"),
-                                          std::string("The tolerance parameter for flat bottom potentials"),
-                                          &settings->flat_bottom_tolerance)
+                              make_vector(std::string("sample-weights"),
+                                          std::string("Whether weights should be sampled or not"),
+                                          &settings->sample_weights)
                               )),
                     super_group, counter==1);
           }
