@@ -139,25 +139,6 @@ public:
      //! Local settings class
      const class Settings: public TermCamshiftBase::Settings {
      } settings;
-     // //! Local settings class
-     // const class Settings: public TermCamshiftBase::Settings {
-     // public:
-
-     //      //! Distance beyond which contributions are set to zero.
-     //      double cutoff_distance;
-
-     //      //! Constructor
-     //      Settings(double cutoff_distance = 5.0)
-     //           : cutoff_distance(cutoff_distance) {}
-
-     //      //! Overload output operator
-     //      friend std::ostream &operator<<(std::ostream &o, const Settings &settings) {
-     //           o << "cutoff-distance:" << settings.cutoff_distance << "\n";
-     //           o << (phaistos::TermCamshiftBase<TermCamshiftCached>::Settings &)settings;
-     //           return o;
-     //      }                    
-     // } settings;     
-
 
      //! Constructor
      //!
@@ -169,6 +150,9 @@ public:
             cached_it(*chain),
             atom_type_to_local_index(definitions::ATOM_ENUM_SIZE, -1),
             settings(settings) {
+
+          using namespace phaistos;
+          using namespace definitions;
 
           const bool only_modified_pairs = true;
           const int minimum_residue_distance = 0;
@@ -206,9 +190,13 @@ public:
 
      } 
  
+     //! Runs the CamShift predictor on a protein structure.
+     //! \param chain The chain object
+     //! \return A Matrix containing six chemical shifts for each residue
      std::vector< std::vector<double> >predict(phaistos::ChainFB& chain) {
 
-
+          using namespace phaistos;
+          using namespace definitions;
 
           std::vector<ResidueHBondData> h_bond_network = get_hydrogen_bonding_network(*(this->chain));
           std::vector<AromaticRing> ring_current_info = get_ring_current_info(*(this->chain));
@@ -268,10 +256,6 @@ public:
                                                           + ss_bond_contribution[i];        
                }
           }
-
-
-
-          // double cut_off2 = settings.cutoff_distance*settings.cutoff_distance;
 
           // Cut-off distance is 5 angstrom -- the squared cut_off is 25.
           const double cut_off2 = 25.0;
@@ -398,44 +382,14 @@ public:
          return temp_protein_predicted_cs;
      }
 
-
-     //! Reject move and backup new parameters
-     //! IMPORTANT: The CamShift cached term does NOT inherit this function
-     void accept() {
-
+     //! Function to accept the cache in the this->accept()
+     void accept_cache() {
           cached_it.accept();
-
-          // If the move was a none-move, backup weights
-          if (this->none_move) {
-               this->weights_previous = this->weights;
-
-          // Else it was a physical move, and backup chemical shifts
-          } else {
-               this->protein_predicted_cs_previous = this->protein_predicted_cs;
-          }
-
-          // Print weights
-          this->print_weights();
      }
 
-
-     //! Reject move and roll back new parameters
-     //! IMPORTANT: The CamShift cached term does NOT inherit this function
-     void reject() {
-
+     //! Function to reject the cache in the this->reject()
+     void reject_cache() {
           cached_it.reject();
-
-          // If the move was a none-move, backup weights
-          if (this->none_move) {
-               this->weights = this->weights_previous;
-
-          // Else it was a physical move, and roll back chemical shifts
-          } else {
-               this->protein_predicted_cs = this->protein_predicted_cs_previous;
-          }
-
-          // Print weights
-          this->print_weights();
      }
 
 };

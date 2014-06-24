@@ -128,7 +128,7 @@ public:
           return weights_new;
      }
 
-
+     //! Prints thread_id, weights and RMSD every 500 steps
      void print_weights() {
 
           std::vector<double> chi_sq = vector_utils::make_vector(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -158,7 +158,7 @@ public:
           this->n_print += 1;
 
           if (this->n_print > 500) {
-              std::cout << "# CHEMSHIFT -- THREAD# " << this->thread_id
+              std::cout << "# CAMSHIFT -- THREAD# " << this->thread_id
                         << "  -- WEIGHTS: " << this->weights
                         << "  -- RMSD: " << rmsd
                         << std::endl;
@@ -168,7 +168,12 @@ public:
      }
 
 
-     double log_gauss(const std::vector< std::vector<double > > &cs1_this, 
+     //! Chemical shift energy using an error model based on a Gauss model
+     //! \param cs1_this A matrix containing chemical shifts
+     //! \param cs2_this A matrix containing chemical shifts
+     //! \param sigma_this A vector of weights (i.e. sigma values)
+     //! \return The energy
+     double energy_log_gauss(const std::vector< std::vector<double > > &cs1_this, 
                       const std::vector< std::vector<double > > &cs2_this, 
                       const std::vector<double> &sigma_this) {
 
@@ -200,12 +205,55 @@ public:
 
           return energy;
 
-    }
+     }
 
+     //! Chemical shift energy using an error model based on a Gauss model, where the weight parameter
+     //! been marginalized.
+     //! \param cs1_this A matrix containing chemical shifts
+     //! \param cs2_this A matrix containing chemical shifts
+     //! \return The energy
+     double energy_log_gauss_no_sigma(const std::vector< std::vector<double > > &cs1_this, 
+                                      const std::vector< std::vector<double > > &cs2_this) {
 
-     double log_cauchy(const std::vector< std::vector<double > > &cs1_this, 
-                       const std::vector< std::vector<double > > &cs2_this, 
-                       const std::vector<double> &gamma_this) {
+          std::vector<double> chi_sq = vector_utils::make_vector(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+          std::vector<int> n_bins = vector_utils::make_vector(0, 0, 0, 0, 0, 0);
+
+          for (unsigned int i = 0; i <  std::min(cs1_this.size(), cs2_this.size()); i++) {
+               for (unsigned int j = 0; j < 6; j++) {
+
+                   if ((std::fabs(cs1_this[i][j]) > 0.0001)
+                    && (std::fabs(cs2_this[i][j]) > 0.0001)
+                    && !(std::isnan(cs1_this[i][j]))
+                    && !(std::isnan(cs2_this[i][j]))) {
+
+                        const double diff = cs1_this[i][j] - cs2_this[i][j];
+                        chi_sq[j] += diff * diff;
+                        n_bins[j] += 1;
+
+                    }
+               }
+          }
+
+          double energy = 0.0;
+
+          for (unsigned int i = 0; i < 6; i++) {
+               if (n_bins[i] > 0) { 
+                    energy += 0.5 * n_bins[i] * std::log(chi_sq[i]);
+               }
+          }
+
+          return energy;
+
+     }
+
+     //! Chemical shift energy using an error model based on a Cauchy function
+     //! \param cs1_this A matrix containing chemical shifts
+     //! \param cs2_this A matrix containing chemical shifts
+     //! \param gamma_this A vector of weights (i.e. gamma values)
+     //! \return The energy
+     double energy_log_cauchy(const std::vector< std::vector<double > > &cs1_this, 
+                              const std::vector< std::vector<double > > &cs2_this, 
+                              const std::vector<double> &gamma_this) {
 
           double energy = 0.0;
 
@@ -239,8 +287,11 @@ public:
      //! \param predicted_cs A list of predicted chemical shifts
      //! \param experimental_cs A list of calculated chemical shifts
      //! \return energy The associated energy based on the Robustelli et al. MD energy
-     double get_energy_robustelli(const std::vector< std::vector<double > > &predicted_cs, 
-                                  const std::vector< std::vector<double > > &experimental_cs) {
+     double energy_flat_bottom(const std::vector< std::vector<double > > &predicted_cs, 
+                               const std::vector< std::vector<double > > &experimental_cs) {
+
+          using namespace phaistos;
+          using namespace definitions;
 
           const double flat_bottom_tolerance = 0.4;
           double cs_energy = 0.0;
@@ -284,7 +335,6 @@ public:
 
           return cs_energy;
      }
-
 
 
      //! Local settings class
@@ -338,13 +388,20 @@ public:
           // Reset none-move check
           this->none_move = false;
 
-          // Set some initial weights
+          // Set some initial default weights
           this->weights = vector_utils::make_vector(1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
+
+          // Set some initial weights for Gauss model
+          if (settings.energy_type == 1) this->weights = vector_utils::make_vector(0.3, 0.9, 0.45, 2.9, 1.1, 1.0);
+
+          // Set some initial weights for Cauchy model
+          if (settings.energy_type == 2) this->weights = vector_utils::make_vector(0.1875, 0.7, 0.3075, 1.8675, 0.735, 0.7675);
+
+          // Put the same weights in the backup
           this->weights_previous = this->weights;
 
-          // Reset print-counter
-          this->n_print = 0;
-
+          // Reset print-counter (a large number, so first step prints out values
+          this->n_print = 1000;
 
           // Check that filename exists
           if (!file_exists(settings.star_filename)) {
@@ -367,17 +424,19 @@ public:
                       int thread_index, ChainFB *chain)
           : EnergyTermCommon(other, random_number_engine, thread_index, chain),
             CamshiftBackendBase(chain),
-          random_number_engine(other.random_number_engine),
-          none_move(other.none_move),
-          weights(other.weights),
-          weights_previous(other.weights_previous),
-          n_print(other.n_print),
-          chemshifts_from_file(other.chemshifts_from_file),
-          protein_predicted_cs(other.protein_predicted_cs),
-          protein_predicted_cs_previous(other.protein_predicted_cs_previous),
-          settings(other.settings) {
+            random_number_engine(other.random_number_engine),
+            none_move(other.none_move),
+            weights(other.weights),
+            weights_previous(other.weights_previous),
+            n_print(other.n_print),
+            chemshifts_from_file(other.chemshifts_from_file),
+            protein_predicted_cs(other.protein_predicted_cs),
+            protein_predicted_cs_previous(other.protein_predicted_cs_previous),
+            settings(other.settings) {
 
+          // Don't copy the thread id, etc (i.e. set individually)
           this->thread_id = thread_index;
+          this->random_number_engine = random_number_engine;
      } 
 
 
@@ -390,15 +449,19 @@ public:
           this->none_move = false;
 
           // Check if current move was a none-move
-          if ((move_info) && (settings.sample_weights)) {
+          if (move_info) {
                if (move_info->modified_angles.empty() == true) {
                     this->none_move = true;
                }
           }
 
           // If this move is a none-move, update weights
-          if (this->none_move) {
-              this->weights = update_weights(this->weights, this->random_number_engine);
+          if ((this->none_move) && (settings.sample_weights)) {
+
+               if ((settings.energy_type == 1) || 
+                   (settings.energy_type == 2)) {
+                    this->weights = update_weights(this->weights, this->random_number_engine);
+               }
 
           // Otherwise update chemical shifts
           } else {
@@ -407,18 +470,45 @@ public:
           } 
 
 
-         // Return the energy according to the energy model
-         return log_gauss(this->protein_predicted_cs, 
-                          this->chemshifts_from_file,
-                          this->weights);
+          double energy = 0.0;
 
+          // Gauss model
+          if (settings.energy_type == 1) {
+               energy = energy_log_gauss(this->protein_predicted_cs, 
+                                         this->chemshifts_from_file,
+                                         this->weights);
+          // Cauchy model
+          } else if (settings.energy_type == 2) {
+               energy = energy_log_cauchy(this->protein_predicted_cs, 
+                                          this->chemshifts_from_file,
+                                          this->weights);
+          // Flat bottom potential
+          } else if (settings.energy_type == 3) {
+               energy = energy_flat_bottom(this->protein_predicted_cs, 
+                                           this->chemshifts_from_file);
+          // Gauss model // marginalized weights
+          } else if (settings.energy_type == 4) {
+               energy = energy_log_gauss_no_sigma(this->protein_predicted_cs, 
+                                                  this->chemshifts_from_file);
+          // Undefined energy function
+          } else {
+               std::cerr << "CAMSHIFT ERROR: Illegal parameter for energy-type = " << settings.energy_type << std::endl;
+               exit(1);
+          }
+
+          return energy;
 
      }
 
 
+     //! Virtual function to avoid duplicate accept() function in cached and uncached terms
+     virtual void accept_cache()=0;
+
      //! Reject move and backup new parameters
-     //! IMPORTANT: The CamShift cached term does NOT inherit this function
      void accept() {
+
+          // Accept cache
+          accept_cache();
 
           // If the move was a none-move, backup weights
           if (this->none_move) {
@@ -429,14 +519,18 @@ public:
                this->protein_predicted_cs_previous = this->protein_predicted_cs;
           }
 
-          // Print weights
           print_weights();
+
      }
 
+     //! Virtual function to avoid duplicate reject() function in cached and uncached terms
+     virtual void reject_cache()=0;
 
      //! Reject move and roll back new parameters
-     //! IMPORTANT: The CamShift cached term does NOT inherit this function
      void reject() {
+
+          // Reject cache
+          reject_cache();
 
           // If the move was a none-move, backup weights
           if (this->none_move) {
@@ -447,8 +541,8 @@ public:
                this->protein_predicted_cs = this->protein_predicted_cs_previous;
           }
 
-          // Print weights
           print_weights();
+
      }
 
 

@@ -21,6 +21,8 @@
 
 #include "camshift.h"
 
+namespace phaistos {
+
 class TermCamshift: public TermCamshiftBase<TermCamshift> {
 
 public:
@@ -31,8 +33,13 @@ public:
      // Use settings from base class
      typedef TermCamshiftBase::Settings Settings;
 
-
+     //! Runs the CamShift predictor on a protein structure (uncached version)
+     //! \param chain The chain object
+     //! \return A Matrix containing six chemical shifts for each residue
      std::vector< std::vector<double> > predict(phaistos::ChainFB& chain) {
+
+          using namespace phaistos;
+          using namespace definitions;
 
           std::vector<ResidueHBondData> h_bond_network = get_hydrogen_bonding_network(chain);
           std::vector<AromaticRing> ring_current_info = get_ring_current_info(chain);
@@ -92,5 +99,13 @@ public:
           : TermCamshiftBase(other, random_number_engine, thread_index, chain) {
      } 
 
+     // Dummy function to avoid duplicate accept() code
+     void accept_cache() {}
+
+     // Dummy function to avoid duplicate reject() code
+     void reject_cache() {}
+
 };
+
+} // End namespace phaistos
 #endif

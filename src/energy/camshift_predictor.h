@@ -26,24 +26,36 @@
 
 #include "camshift_data.h"
 
+
+
 namespace phaistos {
 
 class CamshiftBackendBase {
 
 public:
 
+    
+
      //! Define the cutoff defining an H-bond in angstroms (Must be 3 angstroms)
-     double h_bond_cutoff;
+     double h_bond_cutoff; 
+
      //! A table containing the hybridiztion of all atoms in the protein
      std::vector< std::vector< std::vector<double> > > spn_hybridization_all_atoms;
+
      //! A table cotaining the hybridization of all atoms in the protein (cached version)
      std::vector< std::vector< std::vector< std::vector<double> > > > spn_hybridization_all_atoms_cached;
+
      //! A table containing the radom coil values for each atom
      std::vector< std::vector<double> > random_coil_contribution_all_residues;
 
-     std::vector<Atom*> donor_cache;
-     std::vector<Atom*> acceptor_o_cache;
-     std::vector<Atom*> acceptor_n_cache;
+     //! List that holds all hydrogen bond donors
+     std::vector<phaistos::Atom*> donor_cache;
+
+     //! List that holds all hydrogen bond acceptor oxygen atoms
+     std::vector<phaistos::Atom*> acceptor_o_cache;
+
+     //! List that holds all hydrogen bond acceptor nitrogen atoms
+     std::vector<phaistos::Atom*> acceptor_n_cache;
 
      // //! The NMR STAR format file parser 
      // //! \param star_filename Name of NMR STAR datafile
@@ -110,6 +122,7 @@ public:
      //! \param residue The residue containing the atoms in question
      std::vector<Vector_3D> get_prediction_atom_positions(phaistos::ResidueFB& residue){
 
+          using namespace definitions; 
           if (residue.residue_type == PRO) {
                return vector_utils::make_vector((residue)[HA]->position,
                                                 (residue)[CA]->position,
@@ -158,6 +171,9 @@ public:
      //! \param chain The current state of the chain
      //! \return all_rings A vector of AromaticRing objects, corresponding to each aromatic side chain in the chain
      std::vector<AromaticRing> get_ring_current_info(phaistos::ChainFB& chain) {
+
+          using namespace phaistos;
+          using namespace definitions;
 
            std::vector<AromaticRing> all_rings;
 
@@ -262,6 +278,9 @@ public:
      //! \return ring_current_contribution a vector of contributions for the residue in question
      std::vector<double> get_ring_current_contribution(phaistos::ResidueFB& res1, std::vector<AromaticRing>& all_rings) {
 
+                using namespace phaistos;
+                using namespace definitions;
+
                std::vector<Vector_3D> backbone_atoms_list = get_prediction_atom_positions((res1));
                std::vector<double> ring_current_contribution = vector_utils::make_vector(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 
@@ -299,6 +318,10 @@ public:
      //! Returns the number of atoms in each atom type group for which experimental and predicted chemical shifts
      //! are available.
      std::vector<int> get_number_of_atoms_per_atom_type(std::vector< std::vector<double > > &experimental_cs, phaistos::ChainFB& chain) {
+
+          using namespace phaistos;
+          using namespace definitions;
+
           std::vector<int> bin_counts = vector_utils::make_vector(0, 0, 0, 0, 0, 0);
           for(ResidueIterator<ChainFB> res1(chain); !(res1).end(); ++res1) {
                int residue_index = res1->index;
@@ -342,7 +365,11 @@ public:
      //! Get the hybridization of an atom, by atom-typing via its mass and counting the number of neighboring atoms
      //! \param atom The atom for with a hybridization calulation is desired
      //! \return n where n is the hybridization in an sp(n) scheme, eg. sp2, sp3, etc.
-     int get_spn_hybridization(Atom& atom) {
+     int get_spn_hybridization(phaistos::Atom& atom) {
+
+          using namespace phaistos;
+          using namespace definitions;
+
 
           if (atom.mass == atom_h_weight) {
                return 3;
@@ -389,6 +416,9 @@ public:
      //! \param chain The protein chain
      //! \return spn_hybridization_all_atoms A list containg the hybridization specific coefficients for all atoms in the chain for use in the five_angs function
      std::vector< std::vector< std::vector<double> > > get_spn_hybridization_all_atoms(phaistos::ChainFB& chain) {
+
+          using namespace phaistos;
+          using namespace definitions;
 
           std::vector< std::vector<double> > power_1_coefficients_list_STD;
           std::vector< std::vector<double> > power_1_coefficients_list_GLY;
@@ -479,6 +509,9 @@ public:
      //! \return spn_hybridization_all_atoms A list containg the hybridization specific coefficients for all atoms in the chain for use in the five_angs function
      std::vector< std::vector< std::vector< std::vector<double> > > > get_spn_hybridization_all_atoms_cached(phaistos::ChainFB& chain) {
 
+          using namespace phaistos;
+          using namespace definitions;
+
           std::vector< std::vector< std::vector< std::vector<double> > > > chain_spn_info;
 
           for(ResidueIterator<ChainFB> res(chain); !res.end(); ++res) {
@@ -551,6 +584,9 @@ public:
      //! \return five_angs_contribution The contribution from all extra atoms within a five angstrom sphere from each atom in the residue
      std::vector<double> get_five_angs_contribution(phaistos::ResidueFB& current_residue, std::vector< std::vector< std::vector<double> > >& spn_hybridization_all_atoms, phaistos::ChainFB& chain) {
 
+          using namespace phaistos;
+          using namespace definitions;
+
           int atom_type_index;
           if (current_residue.residue_type == GLY) {
                atom_type_index = 2;
@@ -596,6 +632,9 @@ public:
      //! \param chain The current state of the protein chain
      //! \return extra_distances_contribution A 6-vector of chemical shift contributions
      std::vector<double> get_extra_distances_contribution(phaistos::ResidueFB& current_residue, phaistos::ChainFB& chain) {
+
+          using namespace phaistos;
+          using namespace definitions;
 
           std::vector<double> extra_distances_contribution = vector_utils::make_vector(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
           std::vector< std::vector<double> > extra_distances_coefficients;
@@ -699,6 +738,9 @@ public:
      //! \return dihedral_angle_contribution A 6-vector of chemical shift contributions
      std::vector<double> get_dihedral_angle_contribution(phaistos::ResidueFB& current_residue){
 
+          using namespace phaistos;
+          using namespace definitions;
+
           std::vector< std::vector<double> > dihedral_angle_coefficients;
           std::vector<double> backbone_angles;
 
@@ -774,6 +816,9 @@ public:
      //! \param chain The current protein
      //! \return h_bond_network A vector of struct ResidueHBondData items, one for each residue in the protein.
      std::vector<ResidueHBondData> get_hydrogen_bonding_network(const phaistos::ChainFB& chain) {
+        
+          using namespace phaistos;
+          using namespace definitions;
 
           std::vector<ResidueHBondData> h_bond_network;
 
@@ -910,6 +955,9 @@ public:
      //! \return hydrogen_bonding_contribution A 6-vector of chemical shift contributions
      std::vector<double> get_hydrogen_bonding_contribution(const phaistos::ResidueFB& current_residue, std::vector<ResidueHBondData>& h_bond_network) {
 
+          using namespace phaistos;
+          using namespace definitions;
+
           std::vector<double> hydrogen_bonding_contribution = vector_utils::make_vector(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 
           int current_residue_index = current_residue.index;
@@ -981,7 +1029,10 @@ public:
      //! Get certain side chain atoms fom a residue
      //! \param current_residue The residue in which the side chain is found
      //! \return side_chain_atoms The list of side chain atoms
-     std::vector<AtomEnum> get_side_chain_atoms(const phaistos::ResidueFB& current_residue){
+     std::vector<phaistos::definitions::AtomEnum> get_side_chain_atoms(const phaistos::ResidueFB& current_residue){
+
+          using namespace phaistos;
+          using namespace definitions;
 
           std::vector<AtomEnum> side_chain_atoms;
 
@@ -1020,6 +1071,9 @@ public:
      //! \return side_chain_data a vector containing the coefficients for the important atoms in the side chain
      std::vector< std::vector<double> > get_side_chain_data(const phaistos::ResidueFB& current_residue){
 
+          using namespace phaistos;
+          using namespace definitions;
+
           std::vector< std::vector<double> > side_chain_data;
 
           if      (current_residue.residue_type == ALA) side_chain_data = camshift_constants::side_chain_ALA_data;
@@ -1055,6 +1109,9 @@ public:
      //! \param The residue for which the side chain chemical shift perturbation is to be calculated
      //! \return A 6-vector of chemical shift contributions
      std::vector<double> get_current_side_chain_contribution(phaistos::ResidueFB& current_residue){
+
+          using namespace phaistos;
+          using namespace definitions;
 
           std::vector<Vector_3D> current_residue_query_atom_positions = get_prediction_atom_positions(current_residue);
           std::vector<double> current_side_chain_contribution = vector_utils::make_vector(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -1099,6 +1156,9 @@ public:
      //! \param current_residue The n'th residue
      //! \return ordered_backbone_positions_list A vector of Vector_3D's
      std::vector<Vector_3D> get_ordered_backbone_positions_list(phaistos::ResidueFB& current_residue) {
+
+          using namespace phaistos;
+          using namespace definitions;
 
           Residue *previous_residue = current_residue.get_neighbour(-1);
           Residue *next_residue     = current_residue.get_neighbour(+1);
@@ -1157,6 +1217,9 @@ public:
      //! \return
      std::vector<double> get_backbone_distance_contribution(phaistos::ResidueFB& current_residue){
 
+          using namespace phaistos;
+          using namespace definitions;
+
           std::vector<double> backbone_distance_contributions = vector_utils::make_vector(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 
           std::vector< std::vector<double> > backbone_distances_data;
@@ -1191,6 +1254,9 @@ public:
      //! \param query_residue The residue for which random coil values are to be looked up
      //! \return random_coil_residue_data A 6-vector of random coil values
      std::vector<double> get_random_coil_data_vector(const phaistos::Residue *query_residue) {
+
+          using namespace phaistos;
+          using namespace definitions;
 
           std::vector<double> random_coil_residue_data;
 
@@ -1230,6 +1296,9 @@ public:
      //! \return random_coil_values The random coil value for a given atom
      double get_random_coil_value(phaistos::Atom *query_atom) {
 
+          using namespace phaistos;
+          using namespace definitions;
+
           double random_coil_value = 0.0;
           std::vector<double> random_coil_residue_data;
           random_coil_residue_data = get_random_coil_data_vector(query_atom->residue);
@@ -1258,6 +1327,9 @@ public:
      //! Get random coil values for all six atoms in the residue
      //! \param res1 The residue for which random_coil values are to be looked up
      std::vector<double> get_random_coil_data_residue(phaistos::ResidueFB& res1){
+
+          using namespace phaistos;
+          using namespace definitions;
 
           if (res1.residue_type == PRO) {
                return vector_utils::make_vector(get_random_coil_value((res1)[HA]),
@@ -1289,6 +1361,9 @@ public:
      //! \param chain The protein chain
      //! \return random_coil_data_all_residues A 6xN vector of random coil values
      std::vector< std::vector<double> > get_random_coil_contribution_all_residues(const phaistos::ChainFB& chain) {
+
+          using namespace phaistos;
+          using namespace definitions;
 
           std::vector< std::vector<double> > random_coil_data_all_residues;
 
@@ -1335,6 +1410,9 @@ public:
      //! \return ss_bond_contribution A 6-vector of chemical shift contributions
      std::vector<double> get_ss_bond_contribution(phaistos::ResidueFB& res1, phaistos::ChainFB& chain) {
 
+          using namespace phaistos;
+          using namespace definitions;
+
           std::vector<double> ss_bond_contribution = vector_utils::make_vector(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 
           //Bail out early when query residue is of wrong type or does not have the appropriate SG atom.
@@ -1366,6 +1444,10 @@ public:
      //! Constructor for CamshiftBackendBase
      //! Camshift predictors inhereit from this class
        CamshiftBackendBase(phaistos::ChainFB *chain) {
+
+           using namespace phaistos;
+          using namespace definitions;
+
           for (int i = 0; i < chain->size(); i++) {
                for (int j = 0; j < (*chain)[i].size(); j++) {
 
@@ -1392,9 +1474,13 @@ public:
 
 
 
-
-
+     //! Runs the CamShift predictor on a protein structure.
+     //! \param chain The chain object
+     //! \return A Matrix containing six chemical shifts for each residue
      std::vector< std::vector<double> >predict_base(phaistos::ChainFB& chain) {
+
+          using namespace phaistos;
+          using namespace definitions;
 
           std::vector<ResidueHBondData> h_bond_network = get_hydrogen_bonding_network(chain);
           std::vector<AromaticRing> ring_current_info = get_ring_current_info(chain);
@@ -1440,68 +1526,7 @@ public:
     }
 
 
-
-     std::vector< std::vector<double> >get_local_contributions_value_matrix(phaistos::ChainFB& chain) {
-
-          std::vector<ResidueHBondData> h_bond_network = get_hydrogen_bonding_network(chain);
-          std::vector<AromaticRing> ring_current_info = get_ring_current_info(chain);
-          std::vector< std::vector<double> > protein_predicted_cs;
-
-          for (ResidueIterator<ChainFB> res1(chain); !(res1).end(); ++res1) {
-
-              //Don't calculate chemical shifts of first and last residue.
-              if ((res1->terminal_status == NTERM) || (res1->terminal_status == CTERM)) {
-                        protein_predicted_cs.push_back(vector_utils::make_vector(0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
-                        continue;
-              }
-
-              std::vector<double> random_coil_contribution        = random_coil_contribution_all_residues[res1->index];
-              std::vector<double> dihedral_angle_contribution     = get_dihedral_angle_contribution(*res1);
-              std::vector<double> backbone_distance_contribution  = get_backbone_distance_contribution(*res1);
-              std::vector<double> current_side_chain_contribution = get_current_side_chain_contribution(*res1);
-              std::vector<double> extra_distances_contribution    = get_extra_distances_contribution((*res1), chain);
-              // std::vector<double> five_angs_contribution          = get_five_angs_contribution((*res1), spn_hybridization_all_atoms, chain);
-              std::vector<double> ring_current_contribution       = get_ring_current_contribution((*res1), ring_current_info);
-              std::vector<double> hydrogen_bonding_contribution   = get_hydrogen_bonding_contribution((*res1), h_bond_network);
-              // std::vector<double> ss_bond_contribution            = get_ss_bond_contribution((*res1), chain);
-              std::vector<double> residue_predicted_cs            = vector_utils::make_vector(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-
-              for (unsigned int i = 0; i < 6; i++) {
-                   residue_predicted_cs[i] += backbone_distance_contribution[i]
-                                       + random_coil_contribution[i]
-                                       + current_side_chain_contribution[i]
-                                       + dihedral_angle_contribution[i]
-                                       + extra_distances_contribution[i]
-                                       + hydrogen_bonding_contribution[i]
-                                       + ring_current_contribution[i];
-                                       // + five_angs_contribution[i]
-                                       // + ss_bond_contribution[i];
-
-
-              }
-
-            protein_predicted_cs.push_back(residue_predicted_cs);
-         }
-
-
-
-
-        return protein_predicted_cs;
-    }
-
-
 }; //End class CamshiftBackendBase
-// class CamshiftPredictor : CamshiftBackendBase {
-// 
-// 
-// };
-// 
-// 
-// 
-// class CamshiftCachedPredictor : CamshiftBackendBase {
-// 
-// 
-// };
 
 } // End namespace phaistos
 
