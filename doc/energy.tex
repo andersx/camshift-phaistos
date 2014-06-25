@@ -1,0 +1,60 @@
+\section{CamShift: Chemical shifts restraints (\texttt{camshift(-cached)})}
+This module uses the CamShift method\cite{CamShift} to predict chemical shifts, and defines an energy function to describes the agreement with a set of experimental chemical shifts. 
+CamShift is able to predict the chemical shifts of the HA, CA, N, H, CO, and CB nuclei.
+Use of the cached version of this energy term (\texttt{--energy-camshift-cached)} is recommended, as it is around x5 faster than the uncached version.
+The energy term takes a NMR STAR formatted file as input, e.g.:
+\begin{verbatim}
+1	1	MET	C	C	170.72	0.03	1
+2	1	MET	CA	C	55.22	0.07	1
+3	1	MET	CB	C	33.8	0.04	1
+6	1	MET	N	N	39.34	0.08	1
+7	2	GLN	C	C	174.77	0.1	1
+8	2	GLN	CA	C	54.99	0.11	1
+9	2	GLN	CB	C	31.46	0.11	1
+...
+\end{verbatim}
+The energy can be calculated using one of four different energy models. The weights can be sampled using an uninformative (Jeffreys) prior.
+Separate weights for each atom type (i.e. HA, CA, N, H, CO, CB) are used.
+\subsubsection{Gaussian error model}
+In the Gaussian model the chemical shift energy is given by:
+\begin{equation}
+    E = RT \sum_{j=0}^{m}\left[(n+1) \ln{ \left(\sigma_j \right)} + \sum_{i=0}^{n} \frac{    \Delta\delta_{ij}(\mathbf X)^2}{2\sigma_j^2} \right],
+\end{equation}
+where $R$ is the ideal gas constant, $T$ is the temperature, $j$ runs over the types of nuclei (i.e. HA, CA, N, H, CO, CB), $\sigma_j$ is a weight parameter
+$i$ runs over each residue, and finally $\Delta\delta_{ij}(\mathbf X)$ is the difference between a predicted chemical shift and the same chemical shift measured on the protein structure, $\mathbf X$.
+The weight parameters ($\sigma_j$) can either be sampled or fixed.
+In the latter case good MLE estimates for $\sigma_j$ are given.
+Sampling of weights with the Gaussian model can be numerically unstable, so it's recommended to \underline{NOT} sample weights using the Gaussian model.
+The Gaussian model with fixed weights, however, tends to work very well and is the default behavior of the CamShift energy term.
+
+\subsubsection{Cauchy error model}
+In the Cauchy model the chemical shift energy is given by:
+\begin{equation}
+    E = RT \sum_{j=0}^{m} \left[(n+1) \ln{ \left(\gamma_j \right)} 
+    + \sum_{i=0}^{n} \ln{\left[ 1 + \left(\frac{\Delta\delta_{ij}(\mathbf X)}{\gamma_j} \right)^2\right]\right]}
+\end{equation}
+where, $\gamma_j$ is the weight parameter.
+The weight parameter ($\gamma_j$) can either be sampled or fixed.
+In the latter case good MLE estimates for $\gamma_j$ are given.
+Sampling of weights using the Cauchy model is usually numerically stable and tends to work well.
+The Cauchy model should be the preferred method, if sampling of weight parameters is performed.
+
+\subsubsection{Flat-bottom potential}
+This method implements the flat-bottom potential from Robustelli \textit{et al.}\cite{CSMD} 
+There is no weight parameter for this term, but it is stated that a additional scaling factor of around 5 for this term is optimal. 
+This additional scaling factor must be set manually via the \texttt{--energy-camshift(-cached)-weight} option. 
+This potential has been developed for use in chemical shift restrained MD simulations, and does not seem to provide as much information to the simulation as the other energy models implemented in this module.
+
+\subsubsection{Gaussian error model (marginalized weights)}
+This model is similar to the Gaussian error model mentioned above, but the $\sigma_j$ parameters have been marginalized (integrated out). The energy is thus given by:
+\begin{equation}
+    E = RT \frac{n}{2} \sum_{j=0}^{m} \ln{\left[\sum_{i=0}^{n} \Delta\delta_{ij}(\mathbf X)^2\right]}
+\end{equation}
+This method also seems to work well.
+
+\optiontitle{Settings}
+\begin{optiontable}
+     \option{star-filename}{string}{""}{Chemical shifts file in NMR STAR format.}
+     \option{energy-type}{string}{"gauss"}{Type of energy expression: "gauss" (default), "cauchy", "flat\_bottom", "gauss\_marginalized"}
+     \option{sample-weights}{bool}{false}{Whether weights should be sampled or not}
+\end{optiontable}

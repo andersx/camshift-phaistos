@@ -30,6 +30,8 @@
 #include "protein/definitions.h"
 #include "energy/energy.h"
 
+#include "cs_file_parser.h"
+
 #include "camshift_predictor.h"
 
 namespace phaistos {
@@ -391,17 +393,25 @@ public:
           // Put the same weights in the backup
           this->weights_previous = this->weights;
 
-          // Reset print-counter (a large number, so first step prints out values
+          // Reset print-counter (a large number, so first step prints out values)
           this->n_print = 1000;
 
           // Check that filename exists
           if (!file_exists(settings.star_filename)) {
-               std::cerr << "ERROR (camshift): File \"" << settings.star_filename << "\" not found. Exiting\n";
-               assert(false);
+               std::cerr << "CAMSHIFT ERROR: File \"" << settings.star_filename << "\" not found. Exiting" << std::endl;
+               exit(1);
           }
 
           // Parse chemical shifts file into class variable 
-          this->chemshifts_from_file = get_chemshifts_from_file(settings.star_filename);
+          // this->chemshifts_from_file = get_chemshifts_from_file(settings.star_filename);
+          this->chemshifts_from_file = camshift_parser::value_matrix_from_starfile(settings.star_filename);
+
+          // Extra check, that the data has been parsed properly.
+          if (camshift_parser::do_data_and_chain_match(settings.star_filename, *(this->chain)) == false) {
+               std::cerr << "CAMSHIFT ERROR: Mismatch between chain and chemical shifts datafile." << std::endl;
+               exit(1);
+
+          }
 
           // Make initial chemical shift prediction
           this->protein_predicted_cs = predict_base(*(this->chain));
@@ -425,8 +435,10 @@ public:
             protein_predicted_cs_previous(other.protein_predicted_cs_previous),
             settings(other.settings) {
 
-          // Don't copy the thread id, etc (i.e. set individually)
+          // Don't copy the thread id (as these are obviously different for each thread).
           this->thread_id = thread_index;
+
+          // Give each thread a defined random_number_engine (so runs can be replicated).
           this->random_number_engine = random_number_engine;
      } 
 

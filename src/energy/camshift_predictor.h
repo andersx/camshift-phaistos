@@ -53,65 +53,6 @@ public:
      //! List that holds all hydrogen bond acceptor nitrogen atoms
      std::vector<phaistos::Atom*> acceptor_n_cache;
 
-     // //! The NMR STAR format file parser 
-     // //! \param star_filename Name of NMR STAR datafile
-     // //! \return value_matrix A list of chemical shifts ordered by residue number
-     std::vector< std::vector<double> > get_chemshifts_from_file(const std::string star_filename) {
-     
-          std::vector<std::vector<double> > value_matrix;
-          std::vector<std::string> lines = file_to_string_vector(star_filename);
-          int residue_index_current = uninitialized<int>();
-     
-          for (unsigned int i=0; i<lines.size(); ++i) {
-               std::string line = lines[i];
-               // Remove white space at beginning and end
-               boost::trim(line);
-               if (line.size() == 0)
-                    continue;
-               std::vector<std::string> tokens;
-               boost::split(tokens, line, boost::is_any_of(" \t"), boost::token_compress_on);
-     
-               // Detect whether this is a new residue
-               int residue_index = boost::lexical_cast<int>(tokens[1]);
-               if (residue_index != residue_index_current) {
-                    int offset= (residue_index-residue_index_current);
-                    if (!is_initialized(residue_index_current)) {
-                         offset = 1;
-                    }
-
-                    value_matrix.resize(value_matrix.size()+offset, std::vector<double>(6, UNINITIALIZED));
-                    residue_index_current = residue_index;
-               }
-               std::string atom_type = tokens[3];
-
-               // Attempt to convert CS value to a double
-               double value = uninitialized<double>();
-               if (tokens.size() > 5) {
-                    std::stringstream ss(tokens[5]);
-                    if ((ss >> value).fail() || !(ss >> std::ws).eof()) {
-                         value = uninitialized<double>();
-                    }
-               }
-
-               if (atom_type == "CA") {
-                     value_matrix.back()[1] = value;
-               } else if (atom_type == "CB") {
-                     value_matrix.back()[5] = value;
-               } else if (atom_type == "C") {
-                     value_matrix.back()[4] = value;
-               } else if (atom_type == "N") {
-                      value_matrix.back()[3] = value;
-               } else if (atom_type == "HA") {
-                      value_matrix.back()[0] = value;
-               } else if (atom_type == "H") {
-                      value_matrix.back()[2] = value;
-               } else {
-                     // std::cerr << "WARNING - NMR-STAR parser: Skipping unknown atom type " << atom_type << std::endl;
-               }
-          }
-     
-          return value_matrix;
-     }
 
      //! Get the positions for the correct atoms in the given residue, the atoms types
      //! differ for GLY, PRO and other residues.
