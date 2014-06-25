@@ -1,3 +1,20 @@
+// Copyright (C) 2014 by Anders Steen Christensen
+//
+// This file is part of PHAISTOS
+//
+// PHAISTOS is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// PHAISTOS is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with PHAISTOS.  If not, see <http://www.gnu.org/licenses/>.
+//
 #include <iostream>
 #include <vector>
 
@@ -6,75 +23,14 @@ namespace camshift_parser {
      //! The NMR STAR format file parser 
      //! \param star_filename Name of NMR STAR datafile
      //! \return value_matrix A list of chemical shifts ordered by residue number
-     std::vector< std::vector<double> > value_matrix_from_starfile(const std::string& star_filename) {
+     std::vector< std::vector<double> > value_matrix_from_starfile(const std::string& star_filename, 
+                                                                   phaistos::ChainFB& chain) {
 
           using namespace phaistos;
           using namespace definitions;
 
-          std::vector<std::vector<double> > value_matrix;
+          std::vector<std::vector<double> > value_matrix(chain.size(), vector_utils::make_vector(0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
           std::vector<std::string> lines = file_to_string_vector(star_filename);
-          int residue_index_current = uninitialized<int>();
-
-          for (unsigned int i=0; i<lines.size(); ++i) {
-               std::string line = lines[i];
-               // Remove white space at beginning and end
-               boost::trim(line);
-               if (line.size() == 0)
-                    continue;
-               std::vector<std::string> tokens;
-               boost::split(tokens, line, boost::is_any_of(" \t"), boost::token_compress_on);
-
-               // Detect whether this is a new residue
-               int residue_index = boost::lexical_cast<int>(tokens[1]);
-               if (residue_index != residue_index_current) {
-                    int offset= (residue_index-residue_index_current);
-                    if (!is_initialized(residue_index_current)) {
-                         offset = 1;
-                    }
-
-                    value_matrix.resize(value_matrix.size()+offset, std::vector<double>(6, UNINITIALIZED));
-                    residue_index_current = residue_index;
-               }
-               std::string atom_type = tokens[3];
-
-               // Attempt to convert CS value to a double
-               double value = uninitialized<double>();
-               if (tokens.size() > 5) {
-                    std::stringstream ss(tokens[5]);
-                    if ((ss >> value).fail() || !(ss >> std::ws).eof()) {
-                         value = uninitialized<double>();
-                    }
-               }
-
-               if (atom_type == "CA") {
-                     value_matrix.back()[1] = value;
-               } else if (atom_type == "CB") {
-                     value_matrix.back()[5] = value;
-               } else if (atom_type == "C") {
-                     value_matrix.back()[4] = value;
-               } else if (atom_type == "N") {
-                      value_matrix.back()[3] = value;
-               } else if (atom_type == "HA") {
-                      value_matrix.back()[0] = value;
-               } else if (atom_type == "H") {
-                      value_matrix.back()[2] = value;
-               } else {
-                     // std::cerr << "WARNING - NMR-STAR parser: Skipping unknown atom type " << atom_type << std::endl;
-               }
-          }
-
-          return value_matrix;
-     }
-
-
-     //! Detect if there are mismatches between input chemical shifts data and the actual sequence
-     bool do_data_and_chain_match(const std::string& star_filename, phaistos::ChainFB& chain) {
-
-          using namespace phaistos;
-          using namespace definitions;
-
-          std::vector<std::string> lines = file_to_string_vector(star_filename);
-          bool contains_bugs = false;
 
           for (unsigned int i=0; i<lines.size(); ++i) {
                std::string line = lines[i];
@@ -87,43 +43,63 @@ namespace camshift_parser {
 
                int residue_index = boost::lexical_cast<int>(tokens[1]);
                std::string res_type = tokens[2];
+               double value = boost::lexical_cast<double>(tokens[5]);
+               std::string atom_type = tokens[3];
 
-               for (ResidueIterator<phaistos::ChainFB> res1(chain); !(res1).end(); ++res1) {
+               if (residue_index > chain.size()) {
+                   std::cout << "CAMSHIFT WARNING: Data "<< line << " not found in chain" << std::endl;
+                   continue;
+               } 
 
-                    if (residue_index == (*res1).index + 1) {
-                         // std::cout << "Loading residue:" << (*res1).residue_type << (*res1).index << std::endl;
-                         if (((*res1).residue_type == definitions::ALA) && (res_type != "ALA")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::CYS) && (res_type != "CYS")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::ASP) && (res_type != "ASP")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::GLU) && (res_type != "GLU")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::PHE) && (res_type != "PHE")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::GLY) && (res_type != "GLY")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::HIS) && (res_type != "HIS")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::ILE) && (res_type != "ILE")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::LYS) && (res_type != "LYS")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::LEU) && (res_type != "LEU")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::MET) && (res_type != "MET")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::ASN) && (res_type != "ASN")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::PRO) && (res_type != "PRO")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::GLN) && (res_type != "GLN")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::ARG) && (res_type != "ARG")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::SER) && (res_type != "SER")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::THR) && (res_type != "THR")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::VAL) && (res_type != "VAL")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::TRP) && (res_type != "TRP")) contains_bugs = true;
-                         if (((*res1).residue_type == definitions::TYR) && (res_type != "TYR")) contains_bugs = true;
-                    }
-                    if (contains_bugs) {
-                          std::cerr << "ERROR (chemshift): CS-data mismatch in " << (*res1).residue_type << (*res1).index + 1 << std::endl;
-                          return false;
-                    }
+               ResidueEnum residue_type_chain = chain[residue_index - 1].residue_type;
+
+               bool contains_bugs = false;
+               if ((residue_type_chain == definitions::ALA) && (res_type != "ALA")) contains_bugs = true;
+               if ((residue_type_chain == definitions::CYS) && (res_type != "CYS")) contains_bugs = true;
+               if ((residue_type_chain == definitions::ASP) && (res_type != "ASP")) contains_bugs = true;
+               if ((residue_type_chain == definitions::GLU) && (res_type != "GLU")) contains_bugs = true;
+               if ((residue_type_chain == definitions::PHE) && (res_type != "PHE")) contains_bugs = true;
+               if ((residue_type_chain == definitions::GLY) && (res_type != "GLY")) contains_bugs = true;
+               if ((residue_type_chain == definitions::HIS) && (res_type != "HIS")) contains_bugs = true;
+               if ((residue_type_chain == definitions::ILE) && (res_type != "ILE")) contains_bugs = true;
+               if ((residue_type_chain == definitions::LYS) && (res_type != "LYS")) contains_bugs = true;
+               if ((residue_type_chain == definitions::LEU) && (res_type != "LEU")) contains_bugs = true;
+               if ((residue_type_chain == definitions::MET) && (res_type != "MET")) contains_bugs = true;
+               if ((residue_type_chain == definitions::ASN) && (res_type != "ASN")) contains_bugs = true;
+               if ((residue_type_chain == definitions::PRO) && (res_type != "PRO")) contains_bugs = true;
+               if ((residue_type_chain == definitions::GLN) && (res_type != "GLN")) contains_bugs = true;
+               if ((residue_type_chain == definitions::ARG) && (res_type != "ARG")) contains_bugs = true;
+               if ((residue_type_chain == definitions::SER) && (res_type != "SER")) contains_bugs = true;
+               if ((residue_type_chain == definitions::THR) && (res_type != "THR")) contains_bugs = true;
+               if ((residue_type_chain == definitions::VAL) && (res_type != "VAL")) contains_bugs = true;
+               if ((residue_type_chain == definitions::TRP) && (res_type != "TRP")) contains_bugs = true;
+               if ((residue_type_chain == definitions::TYR) && (res_type != "TYR")) contains_bugs = true;
+
+               if (contains_bugs) {
+                    std::cout << "CAMSHIFT ERROR: CS-data mismatch in " << residue_type_chain << residue_index - 1 << std::endl;
+                    std::cout << "CAMSHIFT ERROR: Trying to parse line:" << line << std::endl;
+                    exit(1);
+               }
+
+
+               if (atom_type == "CA") {
+                    value_matrix[residue_index - 1][1] = value;
+               } else if (atom_type == "CB") {
+                    value_matrix[residue_index - 1][5] = value;
+               } else if (atom_type == "C") {
+                    value_matrix[residue_index - 1][4] = value;
+               } else if (atom_type == "N") {
+                    value_matrix[residue_index - 1][3] = value;
+               } else if (atom_type == "HA") {
+                    value_matrix[residue_index - 1][0] = value;
+               } else if (atom_type == "H") {
+                    value_matrix[residue_index - 1][2] = value;
+               } else {
+                     // std::cerr << "WARNING - NMR-STAR parser: Skipping unknown atom type " << atom_type << std::endl;
                }
           }
 
-          
-          return true;
+          return value_matrix;
      }
-
-
 
 } //End namespace camshift_parser

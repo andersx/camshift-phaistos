@@ -403,19 +403,25 @@ public:
           }
 
           // Parse chemical shifts file into class variable 
-          // this->chemshifts_from_file = get_chemshifts_from_file(settings.star_filename);
-          this->chemshifts_from_file = camshift_parser::value_matrix_from_starfile(settings.star_filename);
-
-          // Extra check, that the data has been parsed properly.
-          if (camshift_parser::do_data_and_chain_match(settings.star_filename, *(this->chain)) == false) {
-               std::cerr << "CAMSHIFT ERROR: Mismatch between chain and chemical shifts datafile." << std::endl;
-               exit(1);
-
-          }
+          this->chemshifts_from_file = camshift_parser::value_matrix_from_starfile(settings.star_filename,
+                                                                                   *(this->chain));
 
           // Make initial chemical shift prediction
           this->protein_predicted_cs = predict_base(*(this->chain));
           this->protein_predicted_cs_previous = this->protein_predicted_cs;
+
+          // Print parsed chemical shifts
+          std::cout << std::endl;
+          std::cout << "Camshift readin the following chemical shifts" << std::endl << std::endl;
+          std::cout << "TYP\tNUM\tHA\tCA\tH\tN\tC\tCB" << std::endl;
+
+          for (unsigned int i = 0; i < this->chemshifts_from_file.size(); i++) {
+               std::cout << (*(this->chain))[i].residue_type << "\t" << i+1;
+               for (unsigned int j = 0; j < 6; j++) {
+                    std::cout << "\t" << this->chemshifts_from_file[i][j];
+               }
+               std::cout << std::endl;
+          }
 
      }
 
