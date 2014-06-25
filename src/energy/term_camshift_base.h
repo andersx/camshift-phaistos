@@ -413,12 +413,15 @@ public:
           // Print parsed chemical shifts
           std::cout << std::endl;
           std::cout << "Camshift readin the following chemical shifts" << std::endl << std::endl;
-          std::cout << "TYP\tNUM\tHA\tCA\tH\tN\tC\tCB" << std::endl;
+          std::cout << "\t\tHA\t\tCA\t\tH\t\tN\t\tC\t\tCB" << std::endl;
+          std::cout << "Type\tRes#\tExp\tCalc\tExp\tCalc\tExp\tCalc\tExp\tCalc\tExp\tCalc\tExp\tCalc" << std::endl;
+
 
           for (unsigned int i = 0; i < this->chemshifts_from_file.size(); i++) {
                std::cout << (*(this->chain))[i].residue_type << "\t" << i+1;
                for (unsigned int j = 0; j < 6; j++) {
-                    std::cout << "\t" << this->chemshifts_from_file[i][j];
+                    std::cout << std::fixed << std::setprecision(2) << 
+                        "\t" << this->chemshifts_from_file[i][j] << "\t" << this->protein_predicted_cs[i][j];
                }
                std::cout << std::endl;
           }

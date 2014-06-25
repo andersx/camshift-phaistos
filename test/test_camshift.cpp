@@ -29,14 +29,14 @@
 #include "protein/iterators/pair_iterator_chaintree.h"
 
 #include "energy/energy.h"
-#include "energy/camshift.h"
+#include "energy/term_camshift.h"
 #include "energy/observable.h"
 #include "energy/observable_collection.h"
 
-using namespace definitions;
-using namespace phaistos;
+void test_camshift(std::string pdb_filename, std::string star_filename) {
 
-void test_camshift(std::string pdb_filename, std::string star_filename, double flat_bottom_tolerance) {
+     using namespace phaistos;
+     using namespace definitions;
 
      // Create chain from PDB filename
      ChainFB chain(pdb_filename,definitions::ALL_ATOMS);
@@ -50,8 +50,6 @@ void test_camshift(std::string pdb_filename, std::string star_filename, double f
      TermCamshift::Settings settings_camshift;
      settings_camshift.weight = 1;
      settings_camshift.star_filename = star_filename;
-     settings_camshift.flat_bottom_tolerance = flat_bottom_tolerance;
-     settings_camshift.debug = 101;
      energy.add_term(new TermCamshift(&chain, settings_camshift));
 
      energy.evaluate();
@@ -61,20 +59,17 @@ void test_camshift(std::string pdb_filename, std::string star_filename, double f
 
 int main(int argc, char *argv[]) {
 
-     double flat_bottom_tolerance = 0.4;
+     using namespace phaistos;
+     using namespace definitions;
 
      if (argc < 3) {
-          std::cerr << "Usage: ./test_camshift bmrxxxx.str myfile.pdb [flat-bottom-tolerance]" << std::endl;
+          std::cerr << "Usage: ./test_camshift bmrxxxx.str myfile.pdb" << std::endl;
           exit(1);
-     }
-
-     if (argc == 4) {
-          flat_bottom_tolerance = atof(argv[3]);
      }
 
      if (argc > 4) {
           std::cerr << "Too many arguments -- confused and bailing out!" << std::endl;
-          std::cerr << "Usage: ./test_camshift bmrxxxx.str myfile.pdb [flat-bottom-tolerance]" << std::endl;
+          std::cerr << "Usage: ./test_camshift bmrxxxx.str myfile.pdb" << std::endl;
           exit(1);
      }
 
@@ -82,8 +77,6 @@ int main(int argc, char *argv[]) {
      std::string pdb_filename = argv[2];
      std::string star_filename = argv[1];
 
-     std::cout << "Using flat-bottom-tolerance = " << flat_bottom_tolerance << std::endl;
-     test_camshift(pdb_filename, star_filename, flat_bottom_tolerance);
-     std::cout << "Using flat-bottom-tolerance = " << flat_bottom_tolerance << std::endl;
+     test_camshift(pdb_filename, star_filename);
 }
             
