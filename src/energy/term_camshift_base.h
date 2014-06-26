@@ -125,7 +125,9 @@ public:
           std::vector<double> chi_sq = vector_utils::make_vector(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
           std::vector<int> n_bins = vector_utils::make_vector(0, 0, 0, 0, 0, 0);
 
-          for (unsigned int i = 0; i <  std::min(this->protein_predicted_cs.size(), this->chemshifts_from_file.size()); i++) {
+          for (unsigned int i = 0; i <  std::min(this->protein_predicted_cs.size(), 
+                                                 this->chemshifts_from_file.size()); i++) {
+
                for (unsigned int j = 0; j < 6; j++) {
 
                     if ((std::fabs(this->protein_predicted_cs[i][j]) > 0.0001)
@@ -143,7 +145,7 @@ public:
           std::vector<double> rmsd = vector_utils::make_vector(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 
           for (unsigned int j = 0; j < 6; j++) {
-               rmsd[j] = chi_sq[j] / n_bins[j];
+               rmsd[j] = std::sqrt(chi_sq[j] / n_bins[j]);
           }
 
           this->n_print += 1;
@@ -420,8 +422,9 @@ public:
           for (unsigned int i = 0; i < this->chemshifts_from_file.size(); i++) {
                std::cout << (*(this->chain))[i].residue_type << "\t" << i+1;
                for (unsigned int j = 0; j < 6; j++) {
-                    std::cout << std::fixed << std::setprecision(2) << 
-                        "\t" << this->chemshifts_from_file[i][j] << "\t" << this->protein_predicted_cs[i][j];
+                    //std::cout << std::fixed << std::setprecision(2) << 
+                    //    "\t" << this->chemshifts_from_file[i][j] << "\t" << this->protein_predicted_cs[i][j];
+                    printf("\t%7.2f\t%7.2f", this->chemshifts_from_file[i][j], this->protein_predicted_cs[i][j]);
                }
                std::cout << std::endl;
           }

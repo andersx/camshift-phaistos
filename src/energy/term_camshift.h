@@ -107,5 +107,121 @@ public:
 
 };
 
+//! Observable specialization for TermCamshift
+template <>
+class Observable<TermCamshift>: public TermCamshift, public ObservableBase {
+
+public:
+
+     //! Local settings class.
+     const class Settings: public TermCamshift::Settings, public ObservableBase::Settings {
+     public:
+
+          //! Constructor. Defines default values for settings object.
+          Settings(){}
+
+          //! Output operator
+          friend std::ostream &operator<<(std::ostream &o, const Settings &settings) {
+               o << static_cast<const typename TermCamshift::Settings>(settings);
+               o << static_cast<const ObservableBase::Settings>(settings);
+               return o;
+          }
+     } settings; //!< Local settings object·
+
+     //! Constructor.
+     //! \param energy_term TermCamshift energy term object
+     //! \param settings Local Settings object
+     //! \param reference_energy_function All observables have a pointer to a reference energy function which they can refer to.
+     Observable(const TermCamshift &energy_term,
+                const ObservableBase::Settings &settings=ObservableBase::Settings(),
+                Energy<ChainFB> *reference_energy_function=NULL)
+          : TermCamshift(energy_term),
+            settings(dynamic_cast<const Settings&>(settings)) {
+     }
+
+     //! Copy Constructor.
+     //! \param other Source object from which copy is made
+     //! \param thread_index Index indicating in which thread|rank the copy exists
+     //! \param chain Molecule chain
+     Observable(const Observable &other, int thread_index, ChainFB *chain)
+          : TermCamshift(other, random_number_engine, thread_index, chain),
+            settings(other.settings) {
+     }
+
+
+     //! Clone: Corresponds to a virtual copy constructor
+     //! \param thread_index Index indicating in which thread|rank the copy exists
+     //! \param chain Molecule chain
+     TermCamshift *clone(int thread_index=0, typename TermCamshift::ChainType *chain=NULL) {
+          return new Observable<TermCamshift>(*this, thread_index, chain);
+     }
+
+
+     //! Chemical shift RMSD between two sets of chemical shifts
+     //! \param cs1_this A matrix containing chemical shifts
+     //! \param cs2_this A matrix containing chemical shifts
+     //! \return A vector containing RMSDs
+     std::vector<double> calc_rmsds(const std::vector< std::vector<double > > &cs1_this, 
+                                    const std::vector< std::vector<double > > &cs2_this) {
+
+          std::vector<double> chi_sq = vector_utils::make_vector(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+          std::vector<int> n_bins = vector_utils::make_vector(0, 0, 0, 0, 0, 0);
+
+          for (unsigned int i = 0; i <  std::min(cs1_this.size(), cs2_this.size()); i++) {
+               for (unsigned int j = 0; j < 6; j++) {
+
+                   if ((std::fabs(cs1_this[i][j]) > 0.0001)
+                    && (std::fabs(cs2_this[i][j]) > 0.0001)
+                    && !(std::isnan(cs1_this[i][j]))
+                    && !(std::isnan(cs2_this[i][j]))) {
+                        
+                         const double diff  = cs1_this[i][j] - cs2_this[i][j];
+                         chi_sq[j] += diff * diff;
+                         n_bins[j] += 1;
+                    }
+               }
+          }
+
+          std::vector<double> rmsds = vector_utils::make_vector(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+
+          for (unsigned int j = 0; j < 6; j++) {
+               rmsds[j] = std::sqrt(chi_sq[j] / n_bins[j]);
+          }
+
+          return rmsds;
+
+     }
+
+
+
+
+     //! Make observation.
+     virtual std::string observe(MoveInfo *move_info=NULL,
+                                 PHAISTOS_LONG_LONG current_iteration=0,
+                                 bool register_only=false) {
+
+          // Energy to be returned
+          double energy = this->evaluate();
+
+          // Calculate new chemical shifts
+          this->protein_predicted_cs = predict_base(*(this->chain));
+
+          // Calculate RMSDs
+          std::vector<double> rmsds = calc_rmsds(this->protein_predicted_cs,
+                                                 this->chemshifts_from_file);
+
+          // Output stream
+          std::stringstream s;
+          s << std::fixed << std::setprecision(5) << energy << "\t" << rmsds;
+
+          return s.str();
+
+     }
+
+}; // End class Observable
+
+
+
+
 } // End namespace phaistos
 #endif
