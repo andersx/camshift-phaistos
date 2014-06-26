@@ -52,6 +52,12 @@ This model is similar to the Gaussian error model mentioned above, but the $\sig
 \end{equation}
 This method also seems to work well.
 
+\subsubsection{CamShift as Observable}
+If used as an observable, sampling of weight parameters is not performed.
+The energy printed out will use a set of fixed MLE estimates for the energy model that is selected.
+Besides the energy, a list of chemical shift RMSDs (for each atom type) is also printed out.
+The order or RMSDs is this list is \texttt{[HA, CA, N, H, CO, CB]}.
+
 \optiontitle{Settings}
 \begin{optiontable}
      \option{star-filename}{string}{""}{Chemical shifts file in NMR STAR format.}
